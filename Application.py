@@ -6,13 +6,12 @@ from NameChange import NameChange
 
 class Application:
     def __init__(
-        self, input_strings_file, input_text_file, output_file, locale="ja_JP"
+        self, input_strings_file, input_text_file, output_file
     ):
         self.input_strings_file = input_strings_file
         self.input_text_file = input_text_file
         self.output_file = output_file
-        self.locale = locale
-        self.name_change = NameChange(locale)
+        self.name_change = NameChange()
 
     def run_anonymization(self, mapping=False):
         """

@@ -20,7 +20,7 @@ def cli():
 @click.option(
     "--name_list",
     "-l",
-    help="List available anonymization methods",
+    help="The path to the file containing the list of names to be anonymized",
     required=True,
     type=click.Path(exists=True),
     prompt="Input the path to the list of names to be anonymized",
@@ -40,9 +40,15 @@ def cli():
     required=False,
     type=click.Path(exists=False),
     default=f"{get_current_datetime()}.anonymized.txt",
+    show_default=True,
 )
 @click.option(
-    "--mapping", "-m", is_flag=True, default=False, help="Export anonymized mapping"
+    "--mapping",
+    "-m",
+    is_flag=True,
+    default=False,
+    help="Export anonymized mapping",
+    show_default=True,
 )
 def anonymize(name_list, in_file, out_file, mapping):
     app = Application(name_list, in_file, out_file)
