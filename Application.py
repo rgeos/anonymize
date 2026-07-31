@@ -1,40 +1,78 @@
 #!/usr/bin/env python
 
 from FileHandler import FileHandler
-from NameChange import NameChange
+from Change import ChangeName, ChangeID
 
 
 class Application:
+    # Set default None parameters for the input target list files
     def __init__(
-        self, input_strings_file, input_text_file, output_file
+        self, input_text_file, output_file, input_names_file=None, input_ids_file=None
     ):
-        self.input_strings_file = input_strings_file
         self.input_text_file = input_text_file
         self.output_file = output_file
-        self.name_change = NameChange()
+        self.input_names_file = input_names_file
+        self.input_ids_file = input_ids_file
 
-    def run_anonymization(self, mapping=False):
+        # Always initialize both worker classes safely
+        self.name_change = ChangeName()
+        self.id_change = ChangeID()
+
+    def run_anonymization(
+        self, anonymize_names=True, anonymize_ids=False, mapping=False
+    ):
         """
-        Anonymize the list of names in the input file
+        Anonymizes names, IDs, or both depending on boolean flags passed.
         """
-        strings_to_replace = FileHandler.read_lines(self.input_strings_file)
+        # 1. Dynamically read lists only if their specific flag is toggled active
+        names_to_replace = (
+            FileHandler.read_lines(self.input_names_file)
+            if (anonymize_names and self.input_names_file)
+            else []
+        )
+        ids_to_replace = (
+            FileHandler.read_lines(self.input_ids_file)
+            if (anonymize_ids and self.input_ids_file)
+            else []
+        )
+
         text_lines = FileHandler.read_lines(self.input_text_file)
         modified_lines = []
 
+        # 2. Iterate and process lines sequentially conditional on toggle choices
         for line in text_lines:
-            modified_line = self.name_change.get_real_name(strings_to_replace, line)
+            modified_line = line
+
+            if anonymize_names and names_to_replace:
+                modified_line = self.name_change.get_real_name(
+                    names_to_replace, modified_line
+                )
+
+            if anonymize_ids and ids_to_replace:
+                modified_line = self.id_change.get_real_id(
+                    ids_to_replace, modified_line
+                )
+
             modified_lines.append(modified_line)
 
+        # 3. Save finalized application content
         FileHandler.write_lines(self.output_file, modified_lines)
         print(f"Processed file saved to {self.output_file}")
 
-        # if you need the mapping between the real <> fake name
+        # 4. Generate mapping tables cleanly based on selections
         if mapping:
-            FileHandler.write_lines(
-                f"mapping_{self.output_file}",
-                self.name_change.name_mapping,
-                mapping=True,
-            )
-            print(f"Mapping file saved to mapping_{self.output_file}")
+            if anonymize_names and names_to_replace:
+                FileHandler.write_lines(
+                    f"mapping_names_{self.output_file}",
+                    self.name_change.mapping,
+                    mapping=True,
+                )
+            if anonymize_ids and ids_to_replace:
+                FileHandler.write_lines(
+                    f"mapping_ids_{self.output_file}",
+                    self.id_change.mapping,
+                    mapping=True,
+                )
+            print("Mapping export steps processed.")
 
         print("Anonymization complete!")
