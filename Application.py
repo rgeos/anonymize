@@ -5,7 +5,6 @@ from Change import ChangeName, ChangeID
 
 
 class Application:
-    # Set default None parameters for the input target list files
     def __init__(
         self, input_text_file, output_file, input_names_file=None, input_ids_file=None
     ):
@@ -14,7 +13,6 @@ class Application:
         self.input_names_file = input_names_file
         self.input_ids_file = input_ids_file
 
-        # Always initialize both worker classes safely
         self.name_change = ChangeName()
         self.id_change = ChangeID()
 
@@ -24,7 +22,7 @@ class Application:
         """
         Anonymizes names, IDs, or both depending on boolean flags passed.
         """
-        # 1. Dynamically read lists only if their specific flag is toggled active
+        # 1. Dynamically read lists only if their specific flag is toggled true
         names_to_replace = (
             FileHandler.read_lines(self.input_names_file)
             if (anonymize_names and self.input_names_file)

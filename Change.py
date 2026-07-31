@@ -34,6 +34,7 @@ class ChangeName(BaseAnonymizer):
     """
     Replacing the real name with an anonymized name
     """
+
     def get_real_name(self, strings_to_replace, text_content):
         return self.anonymize_text(strings_to_replace, text_content, self.fake.name)
 
@@ -42,5 +43,6 @@ class ChangeID(BaseAnonymizer):
     """ "
     Replacing the real ID with an anonymized ID
     """
+
     def get_real_id(self, strings_to_replace, text_content):
         return self.anonymize_text(strings_to_replace, text_content, self.fake.uuid4)
