@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 import os
+import logging
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+)
 
 
 class FileHandler:
@@ -8,12 +13,16 @@ class FileHandler:
     """
 
     @staticmethod
-    def read_lines(file_path):
-        """
-        Reading the file line by line
-        """
-        with open(file_path, "r") as f:
-            return [line.rstrip("\n") for line in f.readlines()]
+    def read_lines(file_path, chunk_size=10000):
+        chunk = []
+        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                chunk.append(line)
+                if len(chunk) >= chunk_size:
+                    yield chunk
+                    chunk = []
+            if chunk:
+                yield chunk
 
     @staticmethod
     def write_lines(file_path, lines, mapping=False):
@@ -28,8 +37,9 @@ class FileHandler:
     @staticmethod
     def read_file(file_path):
         if not file_path or not os.path.exists(file_path):
+            logging.error(f"File not found: {file_path}")
             return []
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             return [line.rstrip("\n") for line in f.readlines()]
 
     @staticmethod

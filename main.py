@@ -57,10 +57,11 @@ def cli():
     show_default=True,
 )
 def anonymize(in_file, out_file, name_list, id_list, mapping):
-    app = Application(in_file, out_file)
-    app.add_anonymization_task(name_list, "get_jp_name_strategy", "names")
-    app.add_anonymization_task(id_list, "get_uuid_strategy", "ids")
-    app.run_anonymization(mapping=mapping)
+    app = Application()
+    app.register_task(name_list, "get_jp_name_strategy", "NAMES")
+    app.register_task(id_list, "get_uuid_strategy", "IDS")
+
+    app.run_anonymization(in_file, out_file, mapping)
 
 
 if __name__ == "__main__":
