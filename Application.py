@@ -74,13 +74,9 @@ class Application:
             chunk_results = pool.map(worker_process_chunk, chunks)
 
         print("Step 5: Saving main anonymized output file...")
-        # todo - to be done by FileHandler
-        with open(self.output_file, "w", encoding="utf-8") as out_f:
-            for chunk in chunk_results:
-                for line in chunk:
-                    out_f.write(f"{line}\n")
+        all_lines = [line for chunk in chunk_results for line in chunk]
+        FileHandler.write_lines(self.output_file, all_lines)
 
-        # Step 6: Export tracking maps seamlessly based on active configurations
         if mapping:
             print("Step 6: Exporting matching translation matrices...")
             for prefix, engine in master_engines.items():
