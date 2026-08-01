@@ -11,15 +11,6 @@ def get_current_datetime():
     return now.strftime("%Y-%m-%d_%H_%M_%S")
 
 
-def check_flag_callback(ctx, param, value):
-    flag_name = f"{param.name}_exists"
-    if value:
-        ctx.params[flag_name] = True
-    else:
-        ctx.params[flag_name] = False
-    return value
-
-
 @click.group()
 def cli():
     pass
@@ -49,8 +40,6 @@ def cli():
     help="The path to the file containing the list of names to be anonymized",
     required=False,
     type=click.Path(exists=True, readable=True),
-    callback=check_flag_callback,
-    # prompt="Input the path to the list of names to be anonymized",
 )
 @click.option(
     "--id_list",
@@ -58,8 +47,6 @@ def cli():
     help="The path to the file containing the list of IDs to be anonymized",
     required=False,
     type=click.Path(exists=True, readable=True),
-    callback=check_flag_callback,
-    # prompt="Input the path to the list of IDs to be anonymized",
 )
 @click.option(
     "--mapping",
@@ -69,13 +56,11 @@ def cli():
     help="Export anonymized mapping",
     show_default=True,
 )
-def anonymize(
-    in_file, out_file, name_list, id_list, name_list_exists, id_list_exists, mapping
-):
-    app = Application(in_file, out_file, name_list, id_list)
-    app.run_anonymization(
-        anonymize_names=name_list_exists, anonymize_ids=id_list_exists, mapping=mapping
-    )
+def anonymize(in_file, out_file, name_list, id_list, mapping):
+    app = Application(in_file, out_file)
+    app.add_anonymization_task(name_list, "get_jp_name_strategy", "names")
+    app.add_anonymization_task(id_list, "get_uuid_strategy", "ids")
+    app.run_anonymization(mapping=mapping)
 
 
 if __name__ == "__main__":

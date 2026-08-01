@@ -1,76 +1,91 @@
 #!/usr/bin/env python
 
+import os
 from FileHandler import FileHandler
-from Change import ChangeName, ChangeID
+from multiprocessing import Pool
+from Anonymizer import Anonymizer, AnonymizationStrategies
+
+anonymizer_registry = []
+
+
+def init_worker(configs):
+    """
+    configs: A list of tuples containing (target_terms_list, strategy_name)
+    """
+    global anonymizer_registry
+    anonymizer_registry = []
+
+    strategies = AnonymizationStrategies()
+
+    for terms, strategy_name in configs:
+        if terms and hasattr(strategies, strategy_name):
+            strategy_func = getattr(strategies, strategy_name)()
+            engine = Anonymizer(terms, strategy_func)
+            anonymizer_registry.append(engine)
+
+
+def worker_process_chunk(chunk_lines):
+    processed_lines = []
+    for line in chunk_lines:
+        modified_line = line
+        # Pipe the line through every active anonymizer engine sequentially
+        for anonymizer in anonymizer_registry:
+            modified_line = anonymizer.process_line(modified_line)
+        processed_lines.append(modified_line)
+    return processed_lines
 
 
 class Application:
-    def __init__(
-        self, input_text_file, output_file, input_names_file=None, input_ids_file=None
-    ):
+    def __init__(self, input_text_file, output_file):
         self.input_text_file = input_text_file
         self.output_file = output_file
-        self.input_names_file = input_names_file
-        self.input_ids_file = input_ids_file
+        self.tasks = []
 
-        self.name_change = ChangeName()
-        self.id_change = ChangeID()
+    def add_anonymization_task(self, target_file_path, strategy_name, mapping_prefix):
+        self.tasks.append((target_file_path, strategy_name, mapping_prefix))
 
-    def run_anonymization(
-        self, anonymize_names=True, anonymize_ids=False, mapping=False
-    ):
-        """
-        Anonymizes names, IDs, or both depending on boolean flags passed.
-        """
-        # 1. Dynamically read lists only if their specific flag is toggled true
-        names_to_replace = (
-            FileHandler.read_lines(self.input_names_file)
-            if (anonymize_names and self.input_names_file)
-            else []
-        )
-        ids_to_replace = (
-            FileHandler.read_lines(self.input_ids_file)
-            if (anonymize_ids and self.input_ids_file)
-            else []
-        )
+    def run_anonymization(self, mapping=False, chunk_size=10000):
+        print("Step 1: Parsing lookup layers and pre-building translation maps...")
+        worker_configs = []
+        master_engines = {}
+        strategies = AnonymizationStrategies()
 
-        text_lines = FileHandler.read_lines(self.input_text_file)
-        modified_lines = []
+        for file_path, strategy_name, prefix in self.tasks:
+            terms = FileHandler.read_file(file_path)
+            if terms:
+                worker_configs.append((terms, strategy_name))
+                strategy_func = getattr(strategies, strategy_name)()
+                master_engines[prefix] = Anonymizer(terms, strategy_func)
 
-        # 2. Iterate and process lines sequentially conditional on toggle choices
-        for line in text_lines:
-            modified_line = line
+        print("Step 2: Loading source text structure...")
+        text_lines = FileHandler.read_file(self.input_text_file)
+        chunks = [
+            text_lines[i : i + chunk_size]
+            for i in range(0, len(text_lines), chunk_size)
+        ]
 
-            if anonymize_names and names_to_replace:
-                modified_line = self.name_change.get_real_name(
-                    names_to_replace, modified_line
-                )
+        print("Step 3: Launching parallel multi-core engine pools...")
+        num_cores = os.cpu_count() or 4
 
-            if anonymize_ids and ids_to_replace:
-                modified_line = self.id_change.get_real_id(
-                    ids_to_replace, modified_line
-                )
+        with Pool(
+            processes=num_cores, initializer=init_worker, initargs=(worker_configs,)
+        ) as pool:
+            print("Step 4: Executing map-reduce processing across workers...")
+            chunk_results = pool.map(worker_process_chunk, chunks)
 
-            modified_lines.append(modified_line)
+        print("Step 5: Saving main anonymized output file...")
+        # todo - to be done by FileHandler
+        with open(self.output_file, "w", encoding="utf-8") as out_f:
+            for chunk in chunk_results:
+                for line in chunk:
+                    out_f.write(f"{line}\n")
 
-        # 3. Save finalized application content
-        FileHandler.write_lines(self.output_file, modified_lines)
-        print(f"Processed file saved to {self.output_file}")
-
-        # 4. Generate mapping tables cleanly based on selections
+        # Step 6: Export tracking maps seamlessly based on active configurations
         if mapping:
-            if anonymize_names and names_to_replace:
-                FileHandler.write_lines(
-                    f"mapping_names_{self.output_file}",
-                    self.name_change.mapping,
-                    mapping=True,
+            print("Step 6: Exporting matching translation matrices...")
+            for prefix, engine in master_engines.items():
+                FileHandler.write_file(
+                    f"mapping_{prefix}_{self.output_file}", engine.mapping
                 )
-            if anonymize_ids and ids_to_replace:
-                FileHandler.write_lines(
-                    f"mapping_ids_{self.output_file}",
-                    self.id_change.mapping,
-                    mapping=True,
-                )
-            print("Mapping export steps processed.")
 
-        print("Anonymization complete!")
+        print("Anonymization completely finished!")
