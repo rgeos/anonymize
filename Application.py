@@ -1,87 +1,72 @@
 #!/usr/bin/env python
 
-import os
+import logging
+import json
 from FileHandler import FileHandler
-from multiprocessing import Pool
-from Anonymizer import Anonymizer, AnonymizationStrategies
-
-anonymizer_registry = []
-
-
-def init_worker(configs):
-    """
-    configs: A list of tuples containing (target_terms_list, strategy_name)
-    """
-    global anonymizer_registry
-    anonymizer_registry = []
-
-    strategies = AnonymizationStrategies()
-
-    for terms, strategy_name in configs:
-        if terms and hasattr(strategies, strategy_name):
-            strategy_func = getattr(strategies, strategy_name)()
-            engine = Anonymizer(terms, strategy_func)
-            anonymizer_registry.append(engine)
-
-
-def worker_process_chunk(chunk_lines):
-    processed_lines = []
-    for line in chunk_lines:
-        modified_line = line
-        # Pipe the line through every active anonymizer engine sequentially
-        for anonymizer in anonymizer_registry:
-            modified_line = anonymizer.process_line(modified_line)
-        processed_lines.append(modified_line)
-    return processed_lines
+from multiprocessing import Pool, cpu_count
+from Anonymizer import (
+    Anonymizer,
+    init_worker,
+    worker_process_chunk,
+)
 
 
 class Application:
-    def __init__(self, input_text_file, output_file):
-        self.input_text_file = input_text_file
-        self.output_file = output_file
+    def __init__(self):
         self.tasks = []
+        self.master_engines = {}
+        self.strategy_provider = Anonymizer()
 
-    def add_anonymization_task(self, target_file_path, strategy_name, mapping_prefix):
-        self.tasks.append((target_file_path, strategy_name, mapping_prefix))
+    def register_task(self, file_path, strategy_name, prefix):
+        """Queues targeted mask execution instructions profiles."""
+        self.tasks.append((file_path, strategy_name, prefix))
 
-    def run_anonymization(self, mapping=False, chunk_size=10000):
-        print("Step 1: Parsing lookup layers and pre-building translation maps...")
-        worker_configs = []
-        master_engines = {}
-        strategies = AnonymizationStrategies()
-
+    def run_anonymization(
+        self, input_text_file, output_text_file, mapping=False, chunk_size=100000
+    ):
+        """Runs optimization pipeline using deterministic master maps and chunks."""
+        logging.info(
+            "1. Building static master dictionary translations mapping indexes..."
+        )
         for file_path, strategy_name, prefix in self.tasks:
             terms = FileHandler.read_file(file_path)
-            if terms:
-                worker_configs.append((terms, strategy_name))
-                strategy_func = getattr(strategies, strategy_name)()
-                master_engines[prefix] = Anonymizer(terms, strategy_func)
+            if not terms:
+                continue
 
-        print("Step 2: Loading source text structure...")
-        text_lines = FileHandler.read_file(self.input_text_file)
-        chunks = [
-            text_lines[i : i + chunk_size]
-            for i in range(0, len(text_lines), chunk_size)
-        ]
+            strategy_method = getattr(self.strategy_provider, strategy_name)()
 
-        print("Step 3: Launching parallel multi-core engine pools...")
-        num_cores = os.cpu_count() or 4
+            mapping_dict = {}
+            for term in sorted(set(terms)):
+                mapping_dict[term] = strategy_method()
+
+            self.master_engines[prefix] = mapping_dict
+
+        num_cores = max(1, cpu_count() - 1)
+        logging.info(
+            f"2. Distributing process pipelines workloads over {num_cores} cores ..."
+        )
 
         with Pool(
-            processes=num_cores, initializer=init_worker, initargs=(worker_configs,)
+            processes=num_cores,
+            initializer=init_worker,
+            initargs=(self.master_engines,),
         ) as pool:
-            print("Step 4: Executing map-reduce processing across workers...")
-            chunk_results = pool.map(worker_process_chunk, chunks)
+            chunks = FileHandler.read_lines(input_text_file, chunk_size=chunk_size)
 
-        print("Step 5: Saving main anonymized output file...")
-        all_lines = [line for chunk in chunk_results for line in chunk]
-        FileHandler.write_lines(self.output_file, all_lines)
+            results = pool.imap(worker_process_chunk, chunks)
+
+            logging.info(
+                f"3. Streaming outputs onto disk output target: {output_text_file}"
+            )
+            with open(output_text_file, "w", encoding="utf-8") as out_f:
+                for processed_chunk in results:
+                    out_f.writelines(processed_chunk)
+
+        logging.info("4. Pipeline executed successfully.")
 
         if mapping:
-            print("Step 6: Exporting matching translation matrices...")
-            for prefix, engine in master_engines.items():
-                FileHandler.write_file(
-                    f"mapping_{prefix}_{self.output_file}", engine.mapping
-                )
+            logging.info(f"5. Writing mapping file")
+            for prefix, engine in self.master_engines.items():
+                FileHandler.write_file(f"mapping_{prefix}_{output_text_file}", engine)
 
-        print("Anonymization completely finished!")
+        logging.info("6. Anonymization completed.")
