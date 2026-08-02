@@ -12,10 +12,15 @@ from Anonymizer import (
 
 
 class Application:
-    def __init__(self):
+    def __init__(self, locale="ja_JP", last_name_path=None, first_name_path=None):
         self.tasks = []
         self.master_engines = {}
-        self.strategy_provider = Anonymizer()
+        self.locale = locale
+        self.strategy_provider = Anonymizer(
+            locale=locale,
+            last_name_path=last_name_path,
+            first_name_path=first_name_path,
+        )
 
     def register_task(self, file_path, strategy_name, prefix):
         """Queues targeted mask execution instructions profiles."""
