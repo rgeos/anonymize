@@ -16,11 +16,14 @@ python main.py anonymize --help
 Usage: main.py anonymize [OPTIONS]
 
 Options:
-  -f, --in_file PATH    Input file path  [required]
-  -o, --out_file PATH   Output file path  [default: 2026-07-31_21_39_35.anonymized.txt]
-  -n, --name_list PATH  The path to the file containing the list of names to be anonymized
-  -i, --id_list PATH    The path to the file containing the list of IDs to be anonymized
-  -m, --mapping         Export anonymized mapping
-  --help                Show this message and exit.
+  -f, --in_file PATH       Input file path  [required]
+  -o, --out_file PATH      Output file path  [default: 2026-08-03_02_55_35.anonymized.txt]
+  -n, --name_list PATH     The path to the file containing the list of names to be anonymized
+  -i, --id_list PATH       The path to the file containing the list of IDs to be anonymized
+  -ln, --last_names PATH   The path to the file containing the list of last_names to be anonymized
+  -fn, --first_names PATH  The path to the file containing the list of first_names to be anonymized
+  -m, --mapping            Export anonymized mapping
+  -l, --locale TEXT        The locale to use  [default: ja_JP]
+  --help                   Show this message and exit.
 ```
 
