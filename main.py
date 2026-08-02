@@ -49,6 +49,19 @@ def cli():
     type=click.Path(exists=True, readable=True),
 )
 @click.option(
+    "--last_names",
+    "-ln",
+    help="The path to the file containing the list of last_names to be anonymized",
+    required=False,
+    type=click.Path(exists=True, readable=True),
+)
+@click.option(
+    "--first_names",
+    "-fn",
+    help="The path to the file containing the list of first_names to be anonymized",
+    type=click.Path(exists=True, readable=True),
+)
+@click.option(
     "--mapping",
     "-m",
     is_flag=True,
@@ -56,9 +69,20 @@ def cli():
     help="Export anonymized mapping",
     show_default=True,
 )
-def anonymize(in_file, out_file, name_list, id_list, mapping):
-    app = Application()
-    app.register_task(name_list, "get_jp_name_strategy", "NAMES")
+@click.option(
+    "--locale",
+    "-l",
+    default="ja_JP",
+    help="The locale to use",
+    show_default=True,
+)
+def anonymize(
+    in_file, out_file, name_list, id_list, mapping, locale, last_names, first_names
+):
+    app = Application(
+        locale=locale, last_name_path=last_names, first_name_path=first_names
+    )
+    app.register_task(name_list, "get_name_strategy", "NAMES")
     app.register_task(id_list, "get_uuid_strategy", "IDS")
 
     app.run_anonymization(in_file, out_file, mapping)

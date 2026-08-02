@@ -4,6 +4,7 @@ import string
 import secrets
 import random
 from faker import Faker
+from NameProvider import NameProvider
 
 # Global worker space parameters initialized safely by the pool
 _worker_mappings = {}
@@ -44,15 +45,35 @@ def worker_process_chunk(lines):
 
 
 class Anonymizer:
-    def __init__(self, locale="ja_JP"):
+    def __init__(self, locale="ja_JP", last_name_path=None, first_name_path=None):
         self.fake = Faker(locale)
+        self.locale = locale
         Faker.seed(196)
         self.alphanumeric_pool = string.ascii_letters + string.digits
 
-    def get_jp_name_strategy(self):
-        return (
-            lambda: f"{self.fake.last_name()} {self.fake.first_name()} {''.join(random.choice(self.alphanumeric_pool) for _ in range(3))}"
-        )
+        # add a custom name provider
+        if last_name_path or first_name_path:
+            provider = NameProvider(self.fake, last_name_path, first_name_path)
+            self.fake.add_provider(provider)
+
+    def get_name_strategy(self):
+        if hasattr(self.fake, "generate_full_name"):
+            seen = set()
+
+            def unique_custom_name():
+                for _ in range(1000):  # Prevent infinite loops if names run out
+                    name = self.fake.generate_full_name()
+                    if name not in seen:
+                        seen.add(name)
+                        return name
+                return self.fake.generate_full_name()
+
+            return unique_custom_name
+        return lambda: self.fake.unique.name()
+        # the old implementation to ensure uniqueness
+        # return (
+        #     lambda: f"{self.fake.last_name()} {self.fake.first_name()} {''.join(random.choice(self.alphanumeric_pool) for _ in range(3))}"
+        # )
 
     def get_uuid_strategy(self):
         return lambda: self.fake.uuid4()
