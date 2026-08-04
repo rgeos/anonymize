@@ -2,9 +2,9 @@
 import re
 import string
 import secrets
-import random
 from faker import Faker
 from NameProvider import NameProvider
+from faker_healthcare import HealthcareProvider
 
 # Global worker space parameters initialized safely by the pool
 _worker_mappings = {}
@@ -56,6 +56,9 @@ class Anonymizer:
             provider = NameProvider(self.fake, last_name_path, first_name_path)
             self.fake.add_provider(provider)
 
+        # register the healthcare provider
+        self.fake.add_provider(HealthcareProvider)
+
     def get_name_strategy(self):
         if hasattr(self.fake, "generate_full_name"):
             seen = set()
@@ -89,3 +92,6 @@ class Anonymizer:
 
     def get_phone_strategy(self):
         return lambda: self.fake.phone_number()
+
+    def get_disease_strategy(self):
+        return lambda: f"{self.fake.disease()}_{self.fake.icd10_code()} : {self.fake.medical_procedure()}"

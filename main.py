@@ -36,15 +36,22 @@ def cli():
 )
 @click.option(
     "--name_list",
-    "-n",
+    "-nl",
     help="The path to the file containing the list of names to be anonymized",
     required=False,
     type=click.Path(exists=True, readable=True),
 )
 @click.option(
     "--id_list",
-    "-i",
+    "-il",
     help="The path to the file containing the list of IDs to be anonymized",
+    required=False,
+    type=click.Path(exists=True, readable=True),
+)
+@click.option(
+    "--disease_list",
+    "-dl",
+    help="The path to the file containing the list of diseases to be replaced",
     required=False,
     type=click.Path(exists=True, readable=True),
 )
@@ -77,13 +84,22 @@ def cli():
     show_default=True,
 )
 def anonymize(
-    in_file, out_file, name_list, id_list, mapping, locale, last_names, first_names
+    in_file,
+    out_file,
+    name_list,
+    id_list,
+    disease_list,
+    mapping,
+    locale,
+    last_names,
+    first_names,
 ):
     app = Application(
         locale=locale, last_name_path=last_names, first_name_path=first_names
     )
     app.register_task(name_list, "get_name_strategy", "NAMES")
     app.register_task(id_list, "get_uuid_strategy", "IDS")
+    app.register_task(disease_list, "get_disease_strategy", "DISEASE")
 
     app.run_anonymization(in_file, out_file, mapping)
 
