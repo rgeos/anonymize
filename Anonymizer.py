@@ -94,4 +94,6 @@ class Anonymizer:
         return lambda: self.fake.phone_number()
 
     def get_disease_strategy(self):
-        return lambda: f"{self.fake.disease()}_{self.fake.icd10_code()} : {self.fake.medical_procedure()}"
+        return (
+            lambda: f"{self.fake.disease()}_{self.fake.icd10_code()} : {self.fake.medical_procedure()}"
+        )
