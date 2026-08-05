@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import logging
-import json
 from FileHandler import FileHandler
 from multiprocessing import Pool, cpu_count
 from Anonymizer import (
