@@ -32,7 +32,7 @@ class FileHandler:
                     f.write(f"{original_name} -> {fake_name}\n")
             else:
                 for line in lines:
-                    f.write(f"{line}\n")
+                    f.write(f"{line}")
 
     @staticmethod
     def read_file(file_path):

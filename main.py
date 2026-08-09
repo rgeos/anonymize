@@ -39,21 +39,21 @@ def cli():
     "-nl",
     help="The path to the file containing the list of names to be anonymized",
     required=False,
-    type=click.Path(exists=True, readable=True),
+    type=click.STRING,
 )
 @click.option(
     "--id_list",
     "-il",
     help="The path to the file containing the list of IDs to be anonymized",
     required=False,
-    type=click.Path(exists=True, readable=True),
+    type=click.STRING,
 )
 @click.option(
     "--disease_list",
     "-dl",
     help="The path to the file containing the list of diseases to be replaced",
     required=False,
-    type=click.Path(exists=True, readable=True),
+    type=click.STRING,
 )
 @click.option(
     "--last_names",
